@@ -87,15 +87,15 @@ func Test_filterActions(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			config.Doit.Set(config.NS, doctl.ArgActionResourceType, c.resourceType)
-			config.Doit.Set(config.NS, doctl.ArgActionRegion, c.region)
-			config.Doit.Set(config.NS, doctl.ArgActionAfter, c.after)
-			config.Doit.Set(config.NS, doctl.ArgActionBefore, c.before)
-			config.Doit.Set(config.NS, doctl.ArgActionStatus, c.status)
-			config.Doit.Set(config.NS, doctl.ArgActionType, c.actionType)
+		withTestClient(t, func(cmdC *CmdConfig, tm *tcMocks) {
+			cmdC.Config.Set(cmdC.NS, doctl.ArgActionResourceType, c.resourceType)
+			cmdC.Config.Set(cmdC.NS, doctl.ArgActionRegion, c.region)
+			cmdC.Config.Set(cmdC.NS, doctl.ArgActionAfter, c.after)
+			cmdC.Config.Set(cmdC.NS, doctl.ArgActionBefore, c.before)
+			cmdC.Config.Set(cmdC.NS, doctl.ArgActionStatus, c.status)
+			cmdC.Config.Set(cmdC.NS, doctl.ArgActionType, c.actionType)
 
-			newActions, err := filterActionList(config, actions)
+			newActions, err := filterActionList(cmdC, actions)
 			assert.NoError(t, err)
 			assert.Len(t, newActions, c.len, c.desc)
 		})

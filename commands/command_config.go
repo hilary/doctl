@@ -19,16 +19,24 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/do"
-	"github.com/spf13/viper"
+	"github.com/digitalocean/doctl/pkg/ssh"
+
+	"github.com/spf13/cobra"
 )
 
 // CmdConfig is a command configuration.
 type CmdConfig struct {
-	NS   string
-	Doit doctl.Config
-	Out  io.Writer
-	Args []string
+	NS           string
+	CobraCommand *cobra.Command
+	Out          io.Writer
+	Args         []string
+
+	// Config wraps a viper instance
+	Config *config.Config
+	// SSH wraps an ssh connection
+	SSH func(user, host, keyPath string, port int, opts ssh.Options) *ssh.Runner
 
 	initServices          func(*CmdConfig) error
 	getContextAccessToken func() string
@@ -61,17 +69,30 @@ type CmdConfig struct {
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
-func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, initGodo bool) (*CmdConfig, error) {
+func NewCmdConfig(ns string, cobraCommand *cobra.Command, out io.Writer, args []string, conf *config.Config, initGodo bool) (*CmdConfig, error) {
 
 	cmdConfig := &CmdConfig{
-		NS:   ns,
-		Doit: dc,
-		Out:  out,
-		Args: args,
+		NS:           ns,
+		CobraCommand: cobraCommand,
+		Out:          out,
+		Args:         args,
+		Config:       conf,
+		SSH:          ssh.SSH,
 
 		initServices: func(c *CmdConfig) error {
-			accessToken := c.getContextAccessToken()
-			godoClient, err := c.Doit.GetGodoClient(Trace, accessToken)
+			trace, err := cobraCommand.Flags().GetBool("trace")
+			if err != nil {
+				trace = false
+			}
+			apiURL, err := cobraCommand.Flags().GetString("api-url")
+			if err != nil {
+				apiURL = ""
+			}
+			godoClient, err := config.GetGodoClient(
+				trace,
+				apiURL,
+				c.getContextAccessToken(),
+			)
 			if err != nil {
 				return fmt.Errorf("unable to initialize DigitalOcean api client: %s", err)
 			}
@@ -103,18 +124,19 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			return nil
 		},
 
+		// these details should get moved into config
 		getContextAccessToken: func() string {
 			context := Context
 			if context == "" {
-				context = viper.GetString("context")
+				context = DoitCmd.CmdConfigConfig.V.GetString("context")
 			}
 			token := ""
 
 			switch context {
 			case doctl.ArgDefaultContext:
-				token = viper.GetString(doctl.ArgAccessToken)
+				token = DoitCmd.CmdConfigConfig.V.GetString(doctl.ArgAccessToken)
 			default:
-				contexts := viper.GetStringMapString("auth-contexts")
+				contexts := DoitCmd.CmdConfigConfig.V.GetStringMapString("auth-contexts")
 
 				token = contexts[context]
 			}
@@ -122,20 +144,21 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			return token
 		},
 
+		// these details should get moved into config
 		setContextAccessToken: func(token string) {
 			context := Context
 			if context == "" {
-				context = viper.GetString("context")
+				context = DoitCmd.CmdConfigConfig.V.GetString("context")
 			}
 
 			switch context {
 			case doctl.ArgDefaultContext:
-				viper.Set(doctl.ArgAccessToken, token)
+				DoitCmd.CmdConfigConfig.V.Set(doctl.ArgAccessToken, token)
 			default:
-				contexts := viper.GetStringMapString("auth-contexts")
+				contexts := DoitCmd.CmdConfigConfig.V.GetStringMapString("auth-contexts")
 				contexts[context] = token
 
-				viper.Set("auth-contexts", contexts)
+				DoitCmd.CmdConfigConfig.V.Set("auth-contexts", contexts)
 			}
 		},
 	}
@@ -149,9 +172,6 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 	return cmdConfig, nil
 }
 
-// CmdRunner runs a command and passes in a cmdConfig.
-type CmdRunner func(*CmdConfig) error
-
 // Display displays the output from a command.
 func (c *CmdConfig) Display(d displayers.Displayable) error {
 	dc := &displayers.Displayer{
@@ -159,12 +179,12 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 		Out:  c.Out,
 	}
 
-	columnList, err := c.Doit.GetString(c.NS, doctl.ArgFormat)
+	columnList, err := c.Config.GetString(c.NS, doctl.ArgFormat)
 	if err != nil {
 		return err
 	}
 
-	withHeaders, err := c.Doit.GetBool(c.NS, doctl.ArgNoHeader)
+	withHeaders, err := c.Config.GetBool(c.NS, doctl.ArgNoHeader)
 	if err != nil {
 		return err
 	}
@@ -175,3 +195,7 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 
 	return dc.Display()
 }
+
+// CmdRunner runs a command and passes in a cmdConfig.
+type CmdRunner func(*CmdConfig) error
+

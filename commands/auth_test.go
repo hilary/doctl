@@ -23,7 +23,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
-	"github.com/spf13/viper"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +35,7 @@ func TestAuthCommand(t *testing.T) {
 
 func TestAuthInit(t *testing.T) {
 	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, nil)
+	DoitCmd.CmdConfigConfig.V.Set(doctl.ArgAccessToken, nil)
 	defer func() {
 		cfgFileWriter = cfw
 	}()
@@ -46,20 +46,19 @@ func TestAuthInit(t *testing.T) {
 
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
 
-		err := RunAuthInit(retrieveUserTokenFunc)(config)
-		assert.NoError(t, err)
+		assert.NoError(t, RunAuthInit(retrieveUserTokenFunc)(c))
 	})
 }
 
 func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, "valid-token")
+	DoitCmd.CmdConfigConfig.V.Set(doctl.ArgAccessToken, "valid-token")
 	defer func() {
 		cfgFileWriter = cfw
-		viper.Set(doctl.ArgAccessToken, nil)
+		DoitCmd.CmdConfigConfig.V.Set(doctl.ArgAccessToken, nil)
 	}()
 
 	retrieveUserTokenFunc := func() (string, error) {
@@ -68,20 +67,18 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
 
-		err := RunAuthInit(retrieveUserTokenFunc)(config)
-		assert.NoError(t, err)
+		assert.NoError(t, RunAuthInit(retrieveUserTokenFunc)(c))
 	})
 }
 
 func TestAuthList(t *testing.T) {
-	buf := &bytes.Buffer{}
-	config := &CmdConfig{Out: buf}
-
-	err := RunAuthList(config)
-	assert.NoError(t, err)
+	assert.NoError(
+		t,
+		RunAuthList(&CmdConfig{Out: &bytes.Buffer{}}),
+	)
 }
 
 func Test_displayAuthContexts(t *testing.T) {
@@ -107,7 +104,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: doctl.ArgDefaultContext,
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default (current)\ntest\n",
 		},
@@ -117,7 +114,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: "test",
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default\ntest (current)\n",
 		},
@@ -127,7 +124,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: "missing",
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default\ntest\n",
 		},

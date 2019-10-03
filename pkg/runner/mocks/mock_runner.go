@@ -11,18 +11,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package doctl
+package runner
 
-import (
-	"fmt"
-	"testing"
+import "github.com/digitalocean/doctl/pkg/runner"
 
-	"github.com/stretchr/testify/assert"
-)
+// MockRunner is an implemenation of Runner for mocking.
+type MockRunner struct {
+	Err error
+}
 
-func TestMockRunner(t *testing.T) {
-	e := fmt.Errorf("an error")
-	mr := MockRunner{e}
+var _ runner.Runner = &MockRunner{}
 
-	assert.Equal(t, e, mr.Run())
+// Run mock runs things.
+func (tr *MockRunner) Run() error {
+	return tr.Err
 }

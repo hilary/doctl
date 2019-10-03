@@ -15,15 +15,14 @@ package commands
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/config"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -37,6 +36,7 @@ var (
 			Use:   "doctl",
 			Short: "doctl is a command line interface for the DigitalOcean API.",
 		},
+		CmdConfigConfig: config.NewConfig(),
 	}
 
 	//Writer wires up stdout for all commands to write to
@@ -60,48 +60,17 @@ var (
 func init() {
 	var cfgFile string
 
-	initConfig()
-
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
 		filepath.Join(configHome(), defaultConfigName), "config file")
-	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
-
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
-	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
-
 	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup(doctl.ArgAccessToken))
-
 	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "output format [text|json]")
-	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
-
-	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", doctl.ArgDefaultContext, "authentication context")
+	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "authentication context")
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
 	addCommands()
-
-	cobra.OnInitialize(initConfig)
-}
-
-func initConfig() {
-	viper.SetEnvPrefix("DIGITALOCEAN")
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	viper.SetConfigType("yaml")
-
-	cfgFile := viper.GetString("config")
-	viper.SetConfigFile(cfgFile)
-
-	viper.SetDefault("output", "text")
-	viper.SetDefault(doctl.ArgContext, doctl.ArgDefaultContext)
-
-	if _, err := os.Stat(cfgFile); err == nil {
-		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("reading initialization failed:", err)
-		}
-	}
 }
 
 // in case we ever want to change this, or let folks configure it...
@@ -175,17 +144,21 @@ func computeCmd() *Command {
 
 type flagOpt func(c *Command, name, key string)
 
+// key is already manually namespaced when requiredOpt is called
+// this flow is totally borked and will be cleaned up in a subsequent changeset
 func requiredOpt() flagOpt {
 	return func(c *Command, name, key string) {
 		c.MarkFlagRequired(key)
-
-		key = fmt.Sprintf("required.%s", key)
-		viper.Set(key, true)
-
-		u := c.Flag(name).Usage
-		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
+		DoitCmd.CmdConfigConfig.V.Set(fmt.Sprintf("required.%s", key), true)
+		c.Flag(name).Usage = fmt.Sprintf("%s %s", c.Flag(name).Usage, requiredColor("(required)"))
 	}
 }
+
+// All of these AddXXXFlags work by binding the flag to the root viper instance, then
+// manually managing the namespaces, relationships, etc. It's extremely brittle, high touch
+// and flaky. We're unwinding it in a series of changesets.
+//
+// Hold on to your hats!
 
 // AddStringFlag adds a string flag to a command.
 func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...flagOpt) {
@@ -196,14 +169,14 @@ func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...fla
 		o(cmd, name, fn)
 	}
 
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	DoitCmd.CmdConfigConfig.V.BindPFlag(fn, cmd.Flags().Lookup(name))
 }
 
 // AddIntFlag adds an integr flag to a command.
 func AddIntFlag(cmd *Command, name, shorthand string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().IntP(name, shorthand, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	DoitCmd.CmdConfigConfig.V.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -214,7 +187,7 @@ func AddIntFlag(cmd *Command, name, shorthand string, def int, desc string, opts
 func AddBoolFlag(cmd *Command, name, shorthand string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().BoolP(name, shorthand, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	DoitCmd.CmdConfigConfig.V.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -225,7 +198,7 @@ func AddBoolFlag(cmd *Command, name, shorthand string, def bool, desc string, op
 func AddStringSliceFlag(cmd *Command, name, shorthand string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().StringSliceP(name, shorthand, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	DoitCmd.CmdConfigConfig.V.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)

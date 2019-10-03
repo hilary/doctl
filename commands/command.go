@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/config"
 
 	"github.com/spf13/cobra"
 )
@@ -27,6 +28,9 @@ import (
 // functionality.
 type Command struct {
 	*cobra.Command
+
+	// DO NOT USE ME! GOING AWAY ASAP! USE AT DIRE RISK!
+	CmdConfigConfig *config.Config
 
 	fmtCols []string
 
@@ -52,16 +56,20 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 }
 
 func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, initCmd bool, options ...cmdOption) *Command {
-	cc := &cobra.Command{
+
+	viperInstance := config.NewConfig()
+
+	cobraCommand := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
 		Long:  desc,
 		Run: func(cmd *cobra.Command, args []string) {
 			c, err := NewCmdConfig(
 				cmdNS(cmd),
-				&doctl.LiveConfig{},
+				cmd,
 				out,
 				args,
+				viperInstance,
 				initCmd,
 			)
 			checkErr(err)
@@ -71,7 +79,10 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out
 		},
 	}
 
-	c := &Command{Command: cc}
+	c := &Command{
+		Command:         cobraCommand,
+		CmdConfigConfig: viperInstance,
+	}
 
 	if parent != nil {
 		parent.AddCommand(c)
@@ -89,5 +100,4 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out
 	}
 
 	return c
-
 }

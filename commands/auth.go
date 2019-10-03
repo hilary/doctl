@@ -27,7 +27,6 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -86,8 +85,7 @@ func Auth() *Command {
 	return cmd
 }
 
-// RunAuthInit initializes the doctl config. Configuration is stored in $XDG_CONFIG_HOME/doctl. On Unix, if
-// XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
+// RunAuthInit initializes the doctl config.
 func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig) error {
 	return func(c *CmdConfig) error {
 		token := c.getContextAccessToken()
@@ -130,11 +128,10 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 func RunAuthList(c *CmdConfig) error {
 	context := Context
 	if context == "" {
-		context = viper.GetString("context")
+		context = DoitCmd.CmdConfigConfig.V.GetString("context")
 	}
-	contexts := viper.GetStringMap("auth-contexts")
 
-	displayAuthContexts(c.Out, context, contexts)
+	displayAuthContexts(c.Out, context, DoitCmd.CmdConfigConfig.V.GetStringMap("auth-contexts"))
 	return nil
 }
 
@@ -166,10 +163,10 @@ func displayAuthContexts(out io.Writer, currentContext string, contexts map[stri
 func RunAuthSwitch(c *CmdConfig) error {
 	context := Context
 	if context == "" {
-		context = viper.GetString("context")
+		context = DoitCmd.CmdConfigConfig.V.GetString("context")
 	}
 
-	viper.Set("context", context)
+	DoitCmd.CmdConfigConfig.V.Set("context", context)
 
 	fmt.Printf("Now using context [%s] by default\n", context)
 	return writeConfig()
@@ -183,7 +180,7 @@ func writeConfig() error {
 
 	defer f.Close()
 
-	b, err := yaml.Marshal(viper.AllSettings())
+	b, err := yaml.Marshal(DoitCmd.CmdConfigConfig.V.AllSettings())
 	if err != nil {
 		return errors.New("unable to encode configuration to YAML format")
 	}
@@ -197,7 +194,7 @@ func writeConfig() error {
 }
 
 func defaultConfigFileWriter() (io.WriteCloser, error) {
-	cfgFile := viper.GetString("config")
+	cfgFile := DoitCmd.CmdConfigConfig.V.GetString("config")
 	f, err := os.Create(cfgFile)
 	if err != nil {
 		return nil, err

@@ -20,7 +20,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/shiena/ansicolor"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -51,7 +50,7 @@ func checkErr(err error) {
 		return
 	}
 
-	output := viper.GetString("output")
+	output := DoitCmd.CmdConfigConfig.V.GetString("output")
 
 	switch output {
 	default:
