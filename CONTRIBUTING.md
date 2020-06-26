@@ -181,7 +181,7 @@ to do so. Travis also runs shellcheck.
 ## Releasing
 
 `doctl` releases are orchestrated by [Travis CI](https://docs.travis-ci.com/user/deployment/),
-triggered when a new tag is pushed to master.
+triggered when a new tag is pushed to main.
 
 ### Tagging a release
 
@@ -238,7 +238,7 @@ snap manually.
 ### Updating Homebrew
 
 Using the url and sha from the github release, update the
-[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
+[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/main/Formula/doctl.rb).
 You can use `brew bump-formula-pr doctl`, or
 
 1. fork `homebrew-core`

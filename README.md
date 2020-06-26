@@ -1,4 +1,4 @@
-# doctl [![Build Status](https://travis-ci.org/digitalocean/doctl.svg?branch=master)](https://travis-ci.org/digitalocean/doctl) [![GoDoc](https://godoc.org/github.com/digitalocean/doctl?status.svg)](https://godoc.org/github.com/digitalocean/doctl) [![Go Report Card](https://goreportcard.com/badge/github.com/digitalocean/doctl)](https://goreportcard.com/report/github.com/digitalocean/doctl)
+# doctl [![Build Status](https://travis-ci.org/digitalocean/doctl.svg?branch=main)](https://travis-ci.org/digitalocean/doctl) [![GoDoc](https://godoc.org/github.com/digitalocean/doctl?status.svg)](https://godoc.org/github.com/digitalocean/doctl) [![Go Report Card](https://goreportcard.com/badge/github.com/digitalocean/doctl)](https://goreportcard.com/report/github.com/digitalocean/doctl)
 
 
 ```
@@ -168,7 +168,7 @@ Windows users can follow [How to: Add Tool Locations to the PATH Environment Var
 If you have
 [Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04)
 configured, you can build a local Docker image using `doctl`'s
-[Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile)
+[Dockerfile](https://github.com/digitalocean/doctl/blob/main/Dockerfile)
 and run `doctl` within a container.
 
 ```

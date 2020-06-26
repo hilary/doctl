@@ -4,7 +4,7 @@
 #
 # For help with the technical aspects of this Dockerfile, see
 #   https://snapcraft.io/docs/t/creating-docker-images-for-snapcraft/11739
-#   https://raw.githubusercontent.com/snapcore/snapcraft/master/docker/stable.Dockerfile
+#   https://raw.githubusercontent.com/snapcore/snapcraft/main/docker/stable.Dockerfile
 # and https://forum.snapcraft.io/. Note that the snapcraft forum does not appear to be indexed
 # effectively (at all?) by google.
 #
